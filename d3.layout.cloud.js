@@ -1,5 +1,8 @@
 // Word cloud layout by Jason Davies, http://www.jasondavies.com/word-cloud/
 // Algorithm due to Jonathan Feinberg, http://static.mrfeinberg.com/bv_ch03.pdf
+
+var previouswords;
+
 (function() {
   function cloud() {
     var size = [256, 256],
@@ -10,6 +13,7 @@
         fontWeight = cloudFontNormal,
         rotate = cloudRotate,
         padding = cloudPadding,
+        previousword = cloudPreviousword,
         spiral = archimedeanSpiral,
         words = [],
         timeInterval = Infinity,
@@ -31,13 +35,18 @@
             d.rotate = rotate.call(this, d, i);
             d.size = ~~fontSize.call(this, d, i);
             d.padding = padding.call(this, d, i);
+            d.previousword = previousword.call(this, d, i);
             return d;
-          }).sort(function(a, b) { return b.size - a.size; });
+          })
+          // sort update words to insert first
+          .sort(function(a, b) {
+            return (b.previousword && a.previousword) ? 1 : (!b.previousword && !a.previousword) ? 0 : b.size - a.size;
+        });
 
       if (timer) clearInterval(timer);
       timer = setInterval(step, 0);
       step();
-
+      previouswords = words;
       return cloud;
 
       function step() {
@@ -45,8 +54,15 @@
             d;
         while (+new Date - start < timeInterval && ++i < n && timer) {
           d = data[i];
-          d.x = (size[0] * (Math.random() + .5)) >> 1;
-          d.y = (size[1] * (Math.random() + .5)) >> 1;
+          // look for word in previouswords; if it's there, use d.x and d.y
+          if (d.previousword) {
+              d.x = size[0]/2 + d.previousword.x;
+              d.y = size[1]/2 + d.previousword.y;
+          }
+          else {
+              d.x = (size[0] * (Math.random() + .5)) >> 1;
+              d.y = (size[1] * (Math.random() + .5)) >> 1;
+          }
           cloudSprite(d, data, i);
           if (d.hasText && place(board, d, bounds)) {
             tags.push(d);
@@ -189,6 +205,12 @@
       return cloud;
     };
 
+    cloud.previousword = function(x) {
+      if (!arguments.length) return previousword;
+      previousword = d3.functor(x);
+      return cloud;
+    }
+
     return d3.rebind(cloud, event, "on");
   }
 
@@ -214,6 +236,15 @@
 
   function cloudPadding() {
     return 1;
+  }
+
+  function cloudPreviousword() {
+    // look up previousword in previouswords
+    if (previouswords) {
+        var thisword = arguments[0]["text"];
+        var result  = previouswords.filter(function(o){return o.text == thisword;} );
+    }
+    return result? result[0] : null; // or undefined
   }
 
   // Fetches a monochrome sprite bitmap for the specified text.
