@@ -40,7 +40,11 @@ var previouswords;
           })
           // sort update words to insert first
           .sort(function(a, b) {
-            return (b.previousword && a.previousword) ? 1 : (!b.previousword && !a.previousword) ? 0 : b.size - a.size;
+            return 
+                (a.previousword && b.previousword) ? b.previousword.size - a.previousword.size : 
+                (a.previousword && !b.previousword) ? -1 : 
+                (!a.previousword && b.previousword) ? 1 : 
+                    b.size - a.size;
         });
 
       if (timer) clearInterval(timer);
@@ -56,8 +60,8 @@ var previouswords;
           d = data[i];
           // look for word in previouswords; if it's there, use d.x and d.y
           if (d.previousword) {
-              d.x = size[0]/2 + d.previousword.x;
-              d.y = size[1]/2 + d.previousword.y;
+              d.x = (size[0] + d.previousword.x) >> 1;
+              d.y = (size[1] + d.previousword.y) >> 1;
           }
           else {
               d.x = (size[0] * (Math.random() + .5)) >> 1;
